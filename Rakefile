@@ -6,7 +6,7 @@ require 'rubocop/rake_task'
 require 'rspec/core/rake_task'
 
 task(:default).clear
-task default: [:rubocop, :spec]
+task default: [:ci]
 
 if defined? RSpec
   task(:spec).clear

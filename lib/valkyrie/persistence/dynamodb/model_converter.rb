@@ -8,7 +8,7 @@ module Valkyrie::Persistence::DynamoDB
     end
 
     def convert!
-      to_h.merge(Valkyrie::Persistence::DynamoDB::Queries::MODEL.to_sym => resource.internal_resource)
+      to_h.merge(Queries::MODEL.to_sym => resource.internal_resource)
     end
 
     # @return [String] The solr document ID

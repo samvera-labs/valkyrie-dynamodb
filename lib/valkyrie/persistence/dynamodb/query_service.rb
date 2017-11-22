@@ -2,32 +2,29 @@
 module Valkyrie::Persistence::DynamoDB
   require 'valkyrie/persistence/dynamodb/queries'
   class QueryService
-    attr_reader :connection, :table_name, :resource_factory
+    attr_reader :adapter, :resource_factory
+    delegate :table, :inverse_table, to: :adapter
     # @param connection [RSolr::Client]
     # @param resource_factory [Valkyrie::Persistence::DynamoDB::ResourceFactory]
-    def initialize(connection:, table_name:, resource_factory:)
-      @connection = connection
-      @table_name = table_name
+    def initialize(adapter:, resource_factory:)
+      @adapter = adapter
       @resource_factory = resource_factory
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_by)
     def find_by(id:)
       validate_id(id)
-      Valkyrie::Persistence::DynamoDB::Queries::FindByIdQuery.new(id, connection: connection, table_name: table_name,
-                                                                      resource_factory: resource_factory).run
+      Valkyrie::Persistence::DynamoDB::Queries::FindByIdQuery.new(id, adapter: adapter, resource_factory: resource_factory).run
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_all)
     def find_all
-      Valkyrie::Persistence::DynamoDB::Queries::FindAllQuery.new(connection: connection, table_name: table_name,
-                                                                 resource_factory: resource_factory).run
+      Valkyrie::Persistence::DynamoDB::Queries::FindAllQuery.new(adapter: adapter, resource_factory: resource_factory).run
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_all_of_model)
     def find_all_of_model(model:)
-      Valkyrie::Persistence::DynamoDB::Queries::FindAllQuery.new(connection: connection, table_name: table_name,
-                                                                 resource_factory: resource_factory, model: model).run
+      Valkyrie::Persistence::DynamoDB::Queries::FindAllQuery.new(adapter: adapter, resource_factory: resource_factory, model: model).run
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_parents)
@@ -38,22 +35,19 @@ module Valkyrie::Persistence::DynamoDB
     # (see Valkyrie::Persistence::Memory::QueryService#find_members)
     def find_members(resource:, model: nil)
       Valkyrie::Persistence::DynamoDB::Queries::FindMembersQuery.new(resource: resource, model: model,
-                                                                     connection: connection, table_name: table_name,
-                                                                     resource_factory: resource_factory).run
+                                                                     adapter: adapter, resource_factory: resource_factory).run
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_references_by)
     def find_references_by(resource:, property:)
       Valkyrie::Persistence::DynamoDB::Queries::FindReferencesQuery.new(resource: resource, property: property,
-                                                                        connection: connection, table_name: table_name,
-                                                                        resource_factory: resource_factory).run
+                                                                        adapter: adapter, resource_factory: resource_factory).run
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_inverse_references_by)
     def find_inverse_references_by(resource:, property:)
       Valkyrie::Persistence::DynamoDB::Queries::FindInverseReferencesQuery.new(resource: resource, property: property,
-                                                                               connection: connection, table_name: table_name,
-                                                                               resource_factory: resource_factory).run
+                                                                               adapter: adapter, resource_factory: resource_factory).run
     end
 
     def custom_queries

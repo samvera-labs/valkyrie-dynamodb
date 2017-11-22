@@ -21,11 +21,11 @@ module Valkyrie::Persistence::DynamoDB
     end
 
     def internal_resource
-      document[Valkyrie::Persistence::DynamoDB::Queries::MODEL]
+      document[Queries::MODEL]
     end
 
     def attributes
-      attribute_hash.merge("id" => id, Valkyrie::Persistence::DynamoDB::Queries::MODEL.to_sym => internal_resource, created_at: created_at, updated_at: updated_at)
+      attribute_hash.merge("id" => id, Queries::MODEL.to_sym => internal_resource, created_at: created_at, updated_at: updated_at)
     end
 
     def created_at
@@ -167,7 +167,7 @@ module Valkyrie::Persistence::DynamoDB
     class NestedResourceID < ::Valkyrie::ValueMapper
       NestedResourceConverter.register(self)
       def self.handles?(value)
-        value.is_a?(Hash) && value[:id] && !value[Valkyrie::Persistence::DynamoDB::Queries::MODEL.to_sym]
+        value.is_a?(Hash) && value[:id] && !value[Queries::MODEL.to_sym]
       end
 
       def result

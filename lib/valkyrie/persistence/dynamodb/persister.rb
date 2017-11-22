@@ -3,7 +3,7 @@ module Valkyrie::Persistence::DynamoDB
   require 'valkyrie/persistence/dynamodb/repository'
   class Persister
     attr_reader :adapter
-    delegate :connection, :table_name, :resource_factory, to: :adapter
+    delegate :table, :inverse_table, :resource_factory, to: :adapter
     # @param adapter [Valkyrie::Persistence::DynamoDB::MetadataAdapter] The adapter with the
     #   configured DynamoDB connection.
     def initialize(adapter:)
@@ -26,23 +26,29 @@ module Valkyrie::Persistence::DynamoDB
     end
 
     def wipe!
-      all_ids = []
-      query = { table_name: table_name, attributes_to_get: ['id'] }
-      loop do
-        resp = connection.scan(query)
-        all_ids += resp.items
-        break if resp.last_evaluated_key.nil?
-        query.merge!(exclusive_key: result.last_evaluated_key)
-      end
-      all_ids.in_groups_of(25) do |group|
-        batch = { request_items: { 'valkyrie_orm' => group.compact.map { |r| { delete_request: { key: r } } } } }
-        connection.batch_write_item(batch)
-      end
+      wipe_table!(table)
+      wipe_table!(inverse_table)
     end
 
     def repository(resources)
-      Valkyrie::Persistence::DynamoDB::Repository.new(resources: resources, connection: connection,
-                                                      table_name: table_name, resource_factory: resource_factory)
+      Valkyrie::Persistence::DynamoDB::Repository.new(resources: resources, adapter: adapter, resource_factory: resource_factory)
     end
+
+    private
+
+      def wipe_table!(target)
+        all_ids = []
+        query = { attributes_to_get: ['id'] }
+        loop do
+          resp = target.scan(query)
+          all_ids += resp.items
+          query.merge!(exclusive_key: resp.last_evaluated_key)
+          break if resp.last_evaluated_key.nil?
+        end
+        all_ids.in_groups_of(25) do |group|
+          batch = { request_items: { target.table_name => group.compact.map { |r| { delete_request: { key: r } } } } }
+          target.client.batch_write_item(batch)
+        end
+      end
   end
 end

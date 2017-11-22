@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 module Valkyrie::Persistence::DynamoDB::Queries
   class FindMembersQuery
-    attr_reader :resource, :connection, :table_name, :resource_factory, :model
-    def initialize(resource:, connection:, table_name:, resource_factory:, model:)
+    attr_reader :resource, :adapter, :resource_factory, :model
+    delegate :table, :inverse_table, to: :adapter
+
+    def initialize(resource:, adapter:, resource_factory:, model:)
       @resource = resource
-      @connection = connection
-      @table_name = table_name
+      @adapter = adapter
       @resource_factory = resource_factory
       @model = model
     end
@@ -31,8 +32,8 @@ module Valkyrie::Persistence::DynamoDB::Queries
       result = []
       member_ids.in_groups_of(100) do |group|
         batch = query_for(group)
-        result += connection.batch_get_item(batch).responses[table_name].select do |doc|
-          model.nil? || doc[Valkyrie::Persistence::DynamoDB::Queries::MODEL] == model.name
+        result += table.client.batch_get_item(batch).responses[table.table_name].select do |doc|
+          model.nil? || doc[MODEL] == model.name
         end
       end
       result
@@ -45,17 +46,13 @@ module Valkyrie::Persistence::DynamoDB::Queries
     def query_for(group)
       {
         request_items: {
-          table_name => {
+          table.table_name => {
             keys: group.compact.map do |ref|
               { 'id' => ref.to_s }
             end
           }
         }
       }
-    end
-
-    def id
-      resource.id.to_s
     end
   end
 end

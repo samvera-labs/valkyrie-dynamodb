@@ -1,0 +1,12 @@
+machine:
+  ruby:
+    version: 2.3.1
+dependencies:
+  post:
+    - bundle exec rake rubocop
+    - bundle exec rake dynamodb:start:
+        background: true
+    - bin/dynamo_wait
+database:
+  override:
+    - echo "Skipping database step."

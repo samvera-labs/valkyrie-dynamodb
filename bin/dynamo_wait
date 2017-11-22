@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+until $(echo '' | nc -v localhost 8000 > /dev/null 2>&1); do
+    printf '.'
+    sleep 1
+done

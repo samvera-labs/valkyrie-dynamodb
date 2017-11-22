@@ -12,10 +12,12 @@ RSpec.configure do |config|
   end
 end
 
+# rubocop:disable Lint/HandleExceptions
 def ignore_resource_error
   yield
 rescue Aws::DynamoDB::Errors::ResourceNotFoundException
 end
+# rubocop:enable Lint/HandleExceptions
 
 def dynamodb_client
   options = { endpoint: (ENV['DYNAMODB_ENDPOINT'] || 'http://localhost:8000') }

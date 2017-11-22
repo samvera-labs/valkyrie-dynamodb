@@ -51,11 +51,9 @@ module Valkyrie::Persistence::DynamoDB
       end
 
       updates.each_pair do |target, refs|
-        inverse_table.update_item({
-          key: { id: target },
-          update_expression: "#{action} refs :refs",
-          expression_attribute_values: { ':refs' => Set.new(refs) }
-        })
+        inverse_table.update_item(key: { id: target },
+                                  update_expression: "#{action} refs :refs",
+                                  expression_attribute_values: { ':refs' => Set.new(refs) })
       end
     end
   end

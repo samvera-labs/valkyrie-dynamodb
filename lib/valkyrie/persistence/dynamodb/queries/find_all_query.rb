@@ -27,7 +27,7 @@ module Valkyrie::Persistence::DynamoDB::Queries
     end
 
     def query
-      { }.tap do |result|
+      {}.tap do |result|
         if model
           result[:scan_filter] = { MODEL => {
             attribute_value_list: [model.name],

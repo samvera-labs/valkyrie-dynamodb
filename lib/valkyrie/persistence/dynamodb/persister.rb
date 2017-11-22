@@ -42,7 +42,7 @@ module Valkyrie::Persistence::DynamoDB
         loop do
           resp = target.scan(query)
           all_ids += resp.items
-          query.merge!(exclusive_key: resp.last_evaluated_key)
+          query[:exclusive_key] = resp.last_evaluated_key
           break if resp.last_evaluated_key.nil?
         end
         all_ids.in_groups_of(25) do |group|

@@ -13,6 +13,7 @@ module Valkyrie::Persistence::DynamoDB
     def persist
       documents = resources.map do |resource|
         generate_id(resource) if resource.id.blank?
+        ensure_multiple_values!(resource)
         db_document(resource)
       end
       documents.in_groups_of(25) do |group|
@@ -21,7 +22,9 @@ module Valkyrie::Persistence::DynamoDB
       end
       update_references('ADD')
       documents.map do |document|
-        resource_factory.to_resource(object: document)
+        resource_factory.to_resource(object: document).tap do |rehydrated_record|
+          rehydrated_record.new_record = false
+        end
       end
     end
 
@@ -55,6 +58,13 @@ module Valkyrie::Persistence::DynamoDB
                                   update_expression: "#{action} refs :refs",
                                   expression_attribute_values: { ':refs' => Set.new(refs) })
       end
+    end
+
+    def ensure_multiple_values!(resource)
+      bad_keys = resource.attributes.except(:internal_resource, :created_at, :updated_at, :new_record, :id).select do |_k, v|
+        !v.nil? && !v.is_a?(Array)
+      end
+      raise ::Valkyrie::Persistence::UnsupportedDatatype, "#{resource}: #{bad_keys.keys} have non-array values, which can not be persisted by Valkyrie. Cast to arrays." unless bad_keys.keys.empty?
     end
   end
 end

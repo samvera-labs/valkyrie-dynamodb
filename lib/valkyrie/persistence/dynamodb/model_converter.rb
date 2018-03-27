@@ -11,12 +11,12 @@ module Valkyrie::Persistence::DynamoDB
       to_h.merge(Queries::MODEL.to_sym => resource.internal_resource)
     end
 
-    # @return [String] The solr document ID
+    # @return [String] The dynamodb document ID
     def id
       resource.id.to_s
     end
 
-    # @return [String] ISO-8601 timestamp in UTC of the created_at for this solr
+    # @return [String] ISO-8601 timestamp in UTC of the created_at for this dynamodb
     #   document.
     def created_at
       if resource_attributes[:created_at]
@@ -41,13 +41,17 @@ module Valkyrie::Persistence::DynamoDB
           attr = resource_attributes[property]
           mapper_val = Array.wrap(DynamoMapperValue.for(Property.new(property, attr)).result)
           mapper_val.each do |val|
-            hsh.merge!(val)
+            if val.respond_to?(:apply_to)
+              val.apply_to(hsh)
+            else
+              hsh.merge!(val)
+            end
           end
         end
       end
 
       def properties
-        resource_attributes.keys - [:id, :created_at, :updated_at]
+        resource_attributes.keys - [:id, :created_at, :updated_at, :new_record]
       end
 
       def resource_attributes
@@ -69,13 +73,29 @@ module Valkyrie::Persistence::DynamoDB
           @value = value
           @scope = scope
         end
+
+        def apply_to(target)
+          target[key] = value
+        end
       end
 
       # Container for casting mappers.
       class DynamoMapperValue < ::Valkyrie::ValueMapper
       end
 
-      # Casts nested resources into a JSON string in solr.
+      # Casts {Boolean} values into a recognizable string in dynamodb.
+      class BooleanPropertyValue < ::Valkyrie::ValueMapper
+        DynamoMapperValue.register(self)
+        def self.handles?(value)
+          value.is_a?(Property) && ([true, false].include? value.value)
+        end
+
+        def result
+          calling_mapper.for(Property.new(value.key, "boolean-#{value.value}")).result
+        end
+      end
+
+      # Casts nested resources into a JSON string in dynamodb.
       class NestedObjectValue < ::Valkyrie::ValueMapper
         DynamoMapperValue.register(self)
         def self.handles?(value)
@@ -114,7 +134,7 @@ module Valkyrie::Persistence::DynamoDB
         end
       end
 
-      # Casts {Valkyrie::ID} values into a recognizable string in solr.
+      # Casts {Valkyrie::ID} values into a recognizable string in dynamodb.
       class IDPropertyValue < ::Valkyrie::ValueMapper
         DynamoMapperValue.register(self)
         def self.handles?(value)
@@ -126,7 +146,7 @@ module Valkyrie::Persistence::DynamoDB
         end
       end
 
-      # Casts {RDF::URI} values into a recognizable string in solr.
+      # Casts {RDF::URI} values into a recognizable string in dynamodb.
       class URIPropertyValue < ::Valkyrie::ValueMapper
         DynamoMapperValue.register(self)
         def self.handles?(value)
@@ -181,7 +201,8 @@ module Valkyrie::Persistence::DynamoDB
         def result
           [
             calling_mapper.for(Property.new(value.key, value.value)).result,
-            calling_mapper.for(Property.new("#{value.key}_lang", "eng")).result
+            calling_mapper.for(Property.new("#{value.key}_lang", "eng")).result,
+            calling_mapper.for(Property.new("#{value.key}_type", "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString")).result
           ]
         end
       end
@@ -194,7 +215,7 @@ module Valkyrie::Persistence::DynamoDB
         end
 
         def result
-          { value.key => value.value }
+          { value.key => value.value.presence }
         end
       end
 
@@ -208,7 +229,8 @@ module Valkyrie::Persistence::DynamoDB
         def result
           [
             calling_mapper.for(Property.new(value.key, value.value.to_s)).result,
-            calling_mapper.for(Property.new("#{value.key}_lang", value.value.language.to_s)).result
+            calling_mapper.for(Property.new("#{value.key}_lang", value.value.language.to_s)).result,
+            calling_mapper.for(Property.new("#{value.key}_type", value.value.datatype.to_s)).result
           ]
         end
       end

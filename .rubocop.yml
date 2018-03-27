@@ -13,6 +13,8 @@ Style/FileName:
     - 'Gemfile'
     - '**/*.rake'
     - 'valkyrie-dynamodb.gemspec'
+Metrics/AbcSize:
+  Max: 30
 Metrics/BlockLength:
   Exclude:
     - '**/*.gemspec'
@@ -20,6 +22,8 @@ Metrics/BlockLength:
     - 'lib/valkyrie/specs/**/*'
     - 'lib/specs/**/*'
     - 'lib/tasks/dev.rake'
+Metrics/MethodLength:
+  Max: 15
 RSpec/MultipleExpectations:
   Enabled: false
 RSpec/ExampleLength:

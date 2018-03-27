@@ -13,8 +13,19 @@ module Valkyrie::Persistence::DynamoDB
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_by)
     def find_by(id:)
+      id = Valkyrie::ID.new(id.to_s) if id.is_a?(String)
       validate_id(id)
       Valkyrie::Persistence::DynamoDB::Queries::FindByIdQuery.new(id, adapter: adapter, resource_factory: resource_factory).run
+    end
+
+    # (see Valkyrie::Persistence::Memory::QueryService#find_many_by_ids)
+    def find_many_by_ids(ids:)
+      ids.map! do |id|
+        id = Valkyrie::ID.new(id.to_s) if id.is_a?(String)
+        validate_id(id)
+        id
+      end
+      Valkyrie::Persistence::DynamoDB::Queries::FindManyByIdsQuery.new(ids, adapter: adapter, resource_factory: resource_factory).run
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_all)
@@ -46,6 +57,7 @@ module Valkyrie::Persistence::DynamoDB
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_inverse_references_by)
     def find_inverse_references_by(resource:, property:)
+      ensure_persisted(resource)
       Valkyrie::Persistence::DynamoDB::Queries::FindInverseReferencesQuery.new(resource: resource, property: property,
                                                                                adapter: adapter, resource_factory: resource_factory).run
     end
@@ -58,6 +70,10 @@ module Valkyrie::Persistence::DynamoDB
 
       def validate_id(id)
         raise ArgumentError, 'id must be a Valkyrie::ID' unless id.is_a? Valkyrie::ID
+      end
+
+      def ensure_persisted(resource)
+        raise ArgumentError, 'resource is not saved' unless resource.persisted?
       end
   end
 end

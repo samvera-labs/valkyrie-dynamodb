@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module Valkyrie::Persistence::DynamoDB
   ##
-  # Converts a solr hash to a {Valkyrie::Resource}
+  # Converts a dynamodb hash to a {Valkyrie::Resource}
   class ORMConverter
     attr_reader :document
     def initialize(document)
@@ -13,7 +13,7 @@ module Valkyrie::Persistence::DynamoDB
     end
 
     def resource
-      resource_klass.new(attributes.symbolize_keys)
+      resource_klass.new(attributes.symbolize_keys.merge(new_record: false))
     end
 
     def resource_klass
@@ -56,6 +56,7 @@ module Valkyrie::Persistence::DynamoDB
     def build_literals(hsh)
       hsh.each_with_object({}) do |(key, value), output|
         next if key.end_with?("_lang")
+        next if key.end_with?("_type")
         output[key] = DynamoValue.for(Property.new(key, value, hsh)).result
       end
     end
@@ -65,26 +66,36 @@ module Valkyrie::Persistence::DynamoDB
 
     # Converts a stored language typed literal from two fields into one
     #   {RDF::Literal}
-    class LanguagePropertyValue < ::Valkyrie::ValueMapper
+    class RDFLiteralPropertyValue < ::Valkyrie::ValueMapper
       DynamoValue.register(self)
       def self.handles?(value)
-        value.is_a?(Property) && value.document["#{value.key}_lang"]
+        value.is_a?(Property) &&
+          (value.document["#{value.key}_lang"] || value.document["#{value.key}_type"])
       end
 
       def result
-        value.value.zip(languages).map do |literal, language|
-          if language == "eng"
+        value.value.each_with_index.map do |literal, idx|
+          language = languages[idx]
+          type = datatypes[idx]
+          if language == "eng" && type == "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
             literal
+          elsif language.present?
+            RDF::Literal.new(literal, language: language, datatype: type)
           else
-            RDF::Literal.new(literal, language: language)
+            RDF::Literal.new(literal, datatype: type)
           end
         end
       end
 
       def languages
-        value.document["#{value.key}_lang"]
+        value.document.fetch("#{value.key}_lang", [])
+      end
+
+      def datatypes
+        value.document.fetch("#{value.key}_type", [])
       end
     end
+
     class PropertyValue < ::Valkyrie::ValueMapper
       DynamoValue.register(self)
       def self.handles?(value)
@@ -108,7 +119,7 @@ module Valkyrie::Persistence::DynamoDB
       end
     end
 
-    # Converts a stored ID value in solr into a {Valkyrie::ID}
+    # Converts a stored ID value in dynamodb into a {Valkyrie::ID}
     class IDValue < ::Valkyrie::ValueMapper
       DynamoValue.register(self)
       def self.handles?(value)
@@ -120,7 +131,7 @@ module Valkyrie::Persistence::DynamoDB
       end
     end
 
-    # Converts a stored URI value in solr into a {RDF::URI}
+    # Converts a stored URI value in dynamodb into a {RDF::URI}
     class URIValue < ::Valkyrie::ValueMapper
       DynamoValue.register(self)
       def self.handles?(value)
@@ -132,7 +143,7 @@ module Valkyrie::Persistence::DynamoDB
       end
     end
 
-    # Converts a nested resource in solr into a {Valkyrie::Resource}
+    # Converts a nested resource in dynamodb into a {Valkyrie::Resource}
     class NestedResourceValue < ::Valkyrie::ValueMapper
       DynamoValue.register(self)
       def self.handles?(value)
@@ -212,7 +223,20 @@ module Valkyrie::Persistence::DynamoDB
       end
     end
 
-    # Converts an integer in solr into an {Integer}
+    # Converts an boolean in dynamodb into an {Boolean}
+    class BooleanValue < ::Valkyrie::ValueMapper
+      DynamoValue.register(self)
+      def self.handles?(value)
+        value.to_s.start_with?("boolean-")
+      end
+
+      def result
+        val = value.sub(/^boolean-/, '')
+        val.casecmp("true").zero?
+      end
+    end
+
+    # Converts an integer in dynamodb into an {Integer}
     class IntegerValue < ::Valkyrie::ValueMapper
       DynamoValue.register(self)
       def self.handles?(value)

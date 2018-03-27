@@ -1,6 +1,4 @@
 # frozen_string_literal: true
-require 'open3'
-require 'open4'
 require 'aws-sdk-dynamodb'
 
 desc "Full continuous integration"

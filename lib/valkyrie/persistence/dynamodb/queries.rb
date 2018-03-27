@@ -5,6 +5,7 @@ module Valkyrie::Persistence::DynamoDB
     MODEL = 'internal_resource'
     require 'valkyrie/persistence/dynamodb/queries/find_all_query'
     require 'valkyrie/persistence/dynamodb/queries/find_by_id_query'
+    require 'valkyrie/persistence/dynamodb/queries/find_many_by_ids_query'
     require 'valkyrie/persistence/dynamodb/queries/find_inverse_references_query'
     require 'valkyrie/persistence/dynamodb/queries/find_members_query'
     require 'valkyrie/persistence/dynamodb/queries/find_references_query'

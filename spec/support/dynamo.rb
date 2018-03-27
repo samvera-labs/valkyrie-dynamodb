@@ -1,6 +1,9 @@
 # frozen_string_literal: true
+require 'docker/stack/localstack/endpoint_stub'
+
 RSpec.configure do |config|
   config.before(:suite) do
+    Docker::Stack::Localstack::EndpointStub.stub_endpoints!
     ignore_resource_error { dynamodb_client.delete_table(table_name: 'valkyrie_orm') }
     ignore_resource_error { dynamodb_client.delete_table(table_name: 'valkyrie_orm.refs') }
   end
@@ -20,6 +23,5 @@ end
 # rubocop:enable Lint/HandleExceptions
 
 def dynamodb_client
-  options = { endpoint: (ENV['DYNAMODB_ENDPOINT'] || 'http://localhost:8000') }
-  Aws::DynamoDB::Client.new(options)
+  Aws::DynamoDB::Client.new
 end

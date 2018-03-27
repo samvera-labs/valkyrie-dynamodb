@@ -21,4 +21,6 @@ RuboCop::RakeTask.new(:rubocop) do |task|
   task.fail_on_error = true
 end
 
-import 'lib/tasks/dev.rake'
+Dir['./lib/tasks/*.rake'].each do |rakefile|
+  import rakefile
+end

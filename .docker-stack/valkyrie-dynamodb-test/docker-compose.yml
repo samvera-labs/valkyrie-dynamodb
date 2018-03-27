@@ -1,0 +1,23 @@
+---
+version: '3.4'
+volumes:
+  localstack:
+services:
+  localstack:
+    image: nulib/localstack
+    ports:
+    - 4969:4569
+    volumes:
+    - localstack:/data
+    environment:
+      SERVICES: dynamodb
+      DATA_DIR: "/data"
+    healthcheck:
+      test:
+      - CMD
+      - awslocal
+      - dynamodb
+      - list-tables
+      interval: 30s
+      timeout: 5s
+      retries: 3

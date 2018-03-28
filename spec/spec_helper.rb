@@ -14,6 +14,9 @@ SimpleCov.start do
   add_filter 'spec'
   add_filter 'vendor'
 end
+require 'docker/stack'
+require 'docker/stack/localstack/endpoint_stub'
+Docker::Stack::Localstack::EndpointStub.stub_endpoints!
 $LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
 require 'valkyrie/dynamodb'
 require 'pry'
